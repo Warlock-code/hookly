@@ -12,10 +12,8 @@ const supabaseAdmin = createClient(
 );
 
 export async function POST(request: Request) {
-  let body: any = {};
-
   try {
-    body = await request.json();
+    const body = await request.json();
 
     const { idea, platform, tone, audience, userId } = body;
 
@@ -39,14 +37,31 @@ export async function POST(request: Request) {
       .eq("user_id", userId)
       .gte("created_at", today.toISOString());
 
-    if ((count || 0) >= 1) {
-      return NextResponse.json(
-        {
-          error:
-            "Free limit reached. Upgrade to Pro or share Hookly to get one extra generation.",
-        },
-        { status: 403 }
-      );
+    const hasUsedDailyFree = (count || 0) >= 1;
+
+    let shareCreditId: string | null = null;
+
+    if (hasUsedDailyFree) {
+      const { data: credit } = await supabaseAdmin
+        .from("share_credits")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("used", false)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      if (!credit) {
+        return NextResponse.json(
+          {
+            error:
+              "Free limit reached. Upgrade to Pro or share Hookly to get one extra generation.",
+          },
+          { status: 403 }
+        );
+      }
+
+      shareCreditId = credit.id;
     }
 
     let result;
@@ -79,7 +94,6 @@ Return ONLY valid JSON:
       });
 
       const content = completion.choices[0].message.content;
-
       result = content ? JSON.parse(content) : null;
     } catch {
       result = {
@@ -96,9 +110,16 @@ Return ONLY valid JSON:
       };
     }
 
-    await supabaseAdmin.from("usage_tracking").insert({
-      user_id: userId,
-    });
+    if (shareCreditId) {
+      await supabaseAdmin
+        .from("share_credits")
+        .update({ used: true })
+        .eq("id", shareCreditId);
+    } else {
+      await supabaseAdmin.from("usage_tracking").insert({
+        user_id: userId,
+      });
+    }
 
     return NextResponse.json(result);
   } catch (error: any) {

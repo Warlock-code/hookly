@@ -140,12 +140,30 @@ export default function GenerateForm() {
 
       <button
   onClick={async () => {
-    await navigator.clipboard.writeText(
-      "Try Hookly — AI captions for TikTok & Instagram creators 🚀 https://hookly-eta.vercel.app/"
-    );
+  const { data: userData } = await supabase.auth.getUser();
+  const userId = userData.user?.id;
 
-    alert("Share message copied!");
-  }}
+  if (!userId) {
+    setMessage("Please log in first.");
+    return;
+  }
+
+  await navigator.clipboard.writeText(
+    "Try Hookly — AI captions for TikTok & Instagram creators 🚀 https://hookly-git-main-animbronyinaa-9864s-projects.vercel.app"
+  );
+
+  const { error } = await supabase.from("share_credits").insert({
+    user_id: userId,
+  });
+
+  if (error) {
+    setMessage(error.message);
+    return;
+  }
+
+  setShowLimitPopup(false);
+  setMessage("Share message copied. You earned 1 extra generation.");
+}}
         className="rounded-xl border border-black/10 px-5 py-3 font-semibold"
       >
         Share Hookly
