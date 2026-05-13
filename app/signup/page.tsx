@@ -2,13 +2,21 @@
 
 import { useState } from "react";
 import { supabase } from "../../lib/supabase";
+import { useSearchParams } from "next/navigation";
+
+function createReferralCode() {
+  return Math.random().toString(36).slice(2, 8);
+}
 
 export default function SignupPage() {
+  const searchParams = useSearchParams();
+  const referralCode = searchParams.get("ref");
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   async function handleSignup() {
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
     });
@@ -16,6 +24,37 @@ export default function SignupPage() {
     if (error) {
       alert(error.message);
       return;
+    }
+
+    const newUserId = data.user?.id;
+
+    if (!newUserId) {
+      alert("Account created. Check your email to confirm.");
+      return;
+    }
+
+    let referrerId: string | null = null;
+
+    if (referralCode) {
+      const { data: referrerProfile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("referral_code", referralCode)
+        .maybeSingle();
+
+      referrerId = referrerProfile?.id || null;
+    }
+
+    await supabase.from("profiles").insert({
+      id: newUserId,
+      referral_code: createReferralCode(),
+      referred_by: referrerId,
+    });
+
+    if (referrerId && referrerId !== newUserId) {
+      await supabase.from("share_credits").insert({
+        user_id: referrerId,
+      });
     }
 
     alert("Account created. Check your email to confirm.");

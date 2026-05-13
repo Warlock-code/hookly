@@ -148,21 +148,24 @@ export default function GenerateForm() {
     return;
   }
 
-  await navigator.clipboard.writeText(
-    "Try Hookly — AI captions for TikTok & Instagram creators 🚀 https://hookly-git-main-animbronyinaa-9864s-projects.vercel.app"
-  );
+  const { data: profile, error } = await supabase
+    .from("profiles")
+    .select("referral_code")
+    .eq("id", userId)
+    .single();
 
-  const { error } = await supabase.from("share_credits").insert({
-    user_id: userId,
-  });
-
-  if (error) {
-    setMessage(error.message);
+  if (error || !profile) {
+    setMessage("Referral profile not found. Please sign out and sign up again.");
     return;
   }
 
-  setShowLimitPopup(false);
-  setMessage("Share message copied. You earned 1 extra generation.");
+  const referralLink = `https://hookly-git-main-animbronyinaa-9864s-projects.vercel.app/signup?ref=${profile.referral_code}`;
+
+  await navigator.clipboard.writeText(
+    `Try Hookly — AI captions for TikTok & Instagram creators 🚀 ${referralLink}`
+  );
+
+  setMessage("Referral link copied. You’ll get 1 extra generation when a friend signs up.");
 }}
         className="rounded-xl border border-black/10 px-5 py-3 font-semibold"
       >
