@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 
 type GeneratedContent = {
@@ -18,6 +18,32 @@ export default function GenerateForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [showLimitPopup, setShowLimitPopup] = useState(false);
+  const [usageCount, setUsageCount] = useState(0);
+
+  useEffect(() => {
+  async function loadUsageCount() {
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData.user?.id;
+
+    if (!userId) return;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const { count } = await supabase
+      .from("usage_tracking")
+      .select("*", {
+        count: "exact",
+        head: true,
+      })
+      .eq("user_id", userId)
+      .gte("created_at", today.toISOString());
+
+    setUsageCount(count || 0);
+  }
+
+  loadUsageCount();
+}, []);
 
   async function handleGenerate() {
   if (!idea.trim()) {
@@ -80,6 +106,7 @@ export default function GenerateForm() {
     hashtags: data.hashtags,
   });
 
+  setUsageCount((current) => current + 1);
   setMessage("Content generated and saved successfully.");
 }
 
@@ -119,6 +146,9 @@ export default function GenerateForm() {
           {isLoading ? "Generating..." : "Generate"}
         </button>
         {message && <p className="mt-3 text-sm text-white/60">{message}</p>}
+        <p className="mt-2 text-sm text-white/40">
+  Free generations used today: {usageCount}/1
+</p>
       </div>
 
          {showLimitPopup && (
