@@ -141,7 +141,7 @@ export default function GenerateForm() {
       <button
   onClick={async () => {
     await navigator.clipboard.writeText(
-      "Try Hookly — AI captions for TikTok & Instagram creators 🚀 http://localhost:3000"
+      "Try Hookly — AI captions for TikTok & Instagram creators 🚀 https://hookly-eta.vercel.app/"
     );
 
     alert("Share message copied!");
