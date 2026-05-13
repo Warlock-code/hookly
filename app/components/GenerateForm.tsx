@@ -154,12 +154,23 @@ export default function GenerateForm() {
     .eq("id", userId)
     .single();
 
-  if (error || !profile) {
-    setMessage("Referral profile not found. Please sign out and sign up again.");
+  let referralCode = profile?.referral_code;
+
+if (error || !profile) {
+  referralCode = Math.random().toString(36).slice(2, 8);
+
+  const { error: createProfileError } = await supabase.from("profiles").insert({
+    id: userId,
+    referral_code: referralCode,
+  });
+
+  if (createProfileError) {
+    setMessage(createProfileError.message);
     return;
   }
+}
 
-  const referralLink = `https://hookly-git-main-animbronyinaa-9864s-projects.vercel.app/signup?ref=${profile.referral_code}`;
+  const referralLink = `https://hookly-git-main-animbronyinaa-9864s-projects.vercel.app/signup?ref=${referralCode}`;
 
   await navigator.clipboard.writeText(
     `Try Hookly — AI captions for TikTok & Instagram creators 🚀 ${referralLink}`
