@@ -52,6 +52,10 @@ export default function Navbar() {
                 Dashboard
               </Link>
 
+              <Link href="/settings" className="hover:text-white">
+  Settings
+</Link>
+
               <Link href="/history" className="hover:text-white">
                 History
               </Link>

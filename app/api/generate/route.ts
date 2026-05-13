@@ -28,40 +28,54 @@ export async function POST(request: Request) {
       );
     }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const { count } = await supabaseAdmin
-      .from("usage_tracking")
-      .select("*", { count: "exact", head: true })
+    const { data: plan } = await supabaseAdmin
+      .from("user_plans")
+      .select("plan, subscription_status, current_period_end")
       .eq("user_id", userId)
-      .gte("created_at", today.toISOString());
+      .maybeSingle();
 
-    const hasUsedDailyFree = (count || 0) >= 1;
+    const isPro =
+      plan?.plan === "pro" &&
+      plan?.subscription_status === "active" &&
+      plan?.current_period_end &&
+      new Date(plan.current_period_end) > new Date();
 
     let shareCreditId: string | null = null;
 
-    if (hasUsedDailyFree) {
-      const { data: credit } = await supabaseAdmin
-        .from("share_credits")
-        .select("id")
+    if (!isPro) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const { count } = await supabaseAdmin
+        .from("usage_tracking")
+        .select("*", { count: "exact", head: true })
         .eq("user_id", userId)
-        .eq("used", false)
-        .order("created_at", { ascending: true })
-        .limit(1)
-        .maybeSingle();
+        .gte("created_at", today.toISOString());
 
-      if (!credit) {
-        return NextResponse.json(
-          {
-            error:
-              "Free limit reached. Upgrade to Pro or share Hookly to get one extra generation.",
-          },
-          { status: 403 }
-        );
+      const hasUsedDailyFree = (count || 0) >= 1;
+
+      if (hasUsedDailyFree) {
+        const { data: credit } = await supabaseAdmin
+          .from("share_credits")
+          .select("id")
+          .eq("user_id", userId)
+          .eq("used", false)
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+
+        if (!credit) {
+          return NextResponse.json(
+            {
+              error:
+                "Free limit reached. Upgrade to Pro or share Hookly to get one extra generation.",
+            },
+            { status: 403 }
+          );
+        }
+
+        shareCreditId = credit.id;
       }
-
-      shareCreditId = credit.id;
     }
 
     let result;
@@ -110,15 +124,17 @@ Return ONLY valid JSON:
       };
     }
 
-    if (shareCreditId) {
-      await supabaseAdmin
-        .from("share_credits")
-        .update({ used: true })
-        .eq("id", shareCreditId);
-    } else {
-      await supabaseAdmin.from("usage_tracking").insert({
-        user_id: userId,
-      });
+    if (!isPro) {
+      if (shareCreditId) {
+        await supabaseAdmin
+          .from("share_credits")
+          .update({ used: true })
+          .eq("id", shareCreditId);
+      } else {
+        await supabaseAdmin.from("usage_tracking").insert({
+          user_id: userId,
+        });
+      }
     }
 
     return NextResponse.json(result);
