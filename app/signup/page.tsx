@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useSearchParams } from "next/navigation";
 
@@ -8,7 +8,7 @@ function createReferralCode() {
   return Math.random().toString(36).slice(2, 8);
 }
 
-export default function SignupPage() {
+function SignupForm() {
   const searchParams = useSearchParams();
   const referralCode = searchParams.get("ref");
 
@@ -89,5 +89,13 @@ export default function SignupPage() {
         </button>
       </div>
     </main>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={<main className="min-h-screen bg-black text-white" />}>
+      <SignupForm />
+    </Suspense>
   );
 }
