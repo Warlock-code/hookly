@@ -67,7 +67,7 @@ export default function PricingPage() {
           <div className="rounded-2xl border border-white bg-white p-6 text-black">
             <h2 className="text-2xl font-bold">Pro</h2>
             <p className="mt-2 text-black/60">For serious creators.</p>
-            <p className="mt-6 text-4xl font-bold">GHS 120/month</p>
+            <p className="mt-6 text-4xl font-bold">$10/month</p>
 
             <ul className="mt-6 space-y-3 text-black/70">
               <li>500 generations per month</li>
