@@ -1,14 +1,36 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useRouter } from "next/navigation";
 
 export default function Navbar() {
   const router = useRouter();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    async function checkSession() {
+      const { data } = await supabase.auth.getSession();
+      setIsLoggedIn(!!data.session);
+    }
+
+    checkSession();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsLoggedIn(!!session);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   async function handleLogout() {
     await supabase.auth.signOut();
+    setIsLoggedIn(false);
     router.push("/login");
   }
 
@@ -20,29 +42,35 @@ export default function Navbar() {
         </Link>
 
         <div className="flex items-center gap-4 text-sm text-white/70">
-          <Link href="/dashboard" className="hover:text-white">
-            Dashboard
-          </Link>
-
           <Link href="/pricing" className="hover:text-white">
             Pricing
           </Link>
 
-          <Link href="/history" className="hover:text-white">
-            History
-          </Link>
+          {isLoggedIn ? (
+            <>
+              <Link href="/dashboard" className="hover:text-white">
+                Dashboard
+              </Link>
 
-          <Link href="/login" className="hover:text-white">
-            Login
-          </Link>
+              <Link href="/history" className="hover:text-white">
+                History
+              </Link>
 
-          <Link href="/signup" className="hover:text-white">
-            Signup
-          </Link>
+              <button onClick={handleLogout} className="hover:text-white">
+                Logout
+              </button>
+            </>
+          ) : (
+            <>
+              <Link href="/login" className="hover:text-white">
+                Login
+              </Link>
 
-          <button onClick={handleLogout} className="hover:text-white">
-            Logout
-          </button>
+              <Link href="/signup" className="hover:text-white">
+                Signup
+              </Link>
+            </>
+          )}
         </div>
       </nav>
     </header>
